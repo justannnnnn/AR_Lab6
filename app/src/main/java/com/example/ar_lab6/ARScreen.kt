@@ -43,7 +43,6 @@ private enum class ObjectSearchState {
 
 @Composable
 fun ARScreen() {
-
     val context = LocalContext.current
 
     var detectedImages by remember {
@@ -73,28 +72,32 @@ fun ARScreen() {
                     addImage("1_number", bitmap, 0.15f)
                 }
             },
-
             onSessionUpdated = { _, frame ->
-                val images = frame
-                    .getUpdatedTrackables(
-                        AugmentedImage::class.java
-                    )
+                val updatedImages = frame
+                    .getUpdatedTrackables(AugmentedImage::class.java)
                     .filter { it.trackingState == TrackingState.TRACKING }
                     .toList()
 
                 if (waitingForImageToDisappear) {
-                    if (images.isEmpty()) {
-                        waitingForImageToDisappear = false
+                    val rediscoveredImage = updatedImages.firstOrNull {
+                        it.trackingMethod == AugmentedImage.TrackingMethod.FULL_TRACKING
+                    }
+
+                    if (rediscoveredImage == null) {
                         detectedImages = emptyList()
                         targetScreenPosition = null
                         searchState = ObjectSearchState.SEARCHING
+                        return@ARSceneView
                     }
-                    return@ARSceneView
+                    waitingForImageToDisappear = false
                 }
+
+                val images = updatedImages
 
                 if (images.isEmpty()) {
                     detectedImages = emptyList()
                     targetScreenPosition = null
+
                     if (searchState != ObjectSearchState.SEARCHING) {
                         searchState = ObjectSearchState.SEARCHING
                     }
